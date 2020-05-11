@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Material Design for Bootstrap fonts and icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
+
+    <!-- Material Design for Bootstrap CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css" integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+    <style>
+      #mainscreen {
+        height: 200em;
+      }
+    </style>
+    <title>Learnification.fun!</title>
+  </head>
+  <body>
+    <div class="bmd-layout-container bmd-drawer-f-l" id="mainscreen">
+      <header class="bmd-layout-header">
+        <div class="navbar navbar-light bg-faded">
+          <button class="navbar-toggler" type="button" data-toggle="drawer" data-target="#dw-s1">
+            <span class="sr-only">Toggle drawer</span>
+            <i class="material-icons">menu</i>
+          </button>
+          <h1 class="nav navbar-nav">Learnification.fun</h1>
+          <ul class="nav navbar-nav">
+            <li class="nav-item"><span id="userstuff">Guest</span></li>
+            <li class="nav-item"><a id="logout">Logout</a></li>
+          </ul>
+        </div>
+      </header>
+      <div id="dw-s1" class="bmd-layout-drawer bg-faded">
+        <header>
+          <a class="navbar-brand">Modules</a>
+        </header>
+        <ul class="list-group" id="modulesnav">
+          <a class="list-group-item">Replace Me</a>
+          <a class="list-group-item">Link 2</a>
+          <a class="list-group-item">Link 3</a>
+        </ul>
+      </div>
+      <main class="bmd-layout-content">
+        <div class="container" id="mainpage">
+          <h1>Loading...</h1>
+          <p>loading...</p>
+        </div>
+      </main>
+    </div>
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://www.gstatic.com/firebasejs/7.14.3/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.3/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.14.3/firebase-auth.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.0/showdown.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/popper.js@1.12.6/dist/umd/popper.js" integrity="sha384-fA23ZRQ3G/J53mElWqVJEGJzU0sTs+SvzG8fXVWP+kJQ1lwFAOkcUOysnlKJC33U" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-material-design@4.1.1/dist/js/bootstrap-material-design.js" integrity="sha384-CauSuKpEqAFajSpkdjv3z9t8E7RlpJ1UP0lKM/+NdtSarroVKu069AlsRPKkFBz9" crossorigin="anonymous"></script>
+    <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyD4kZLorBvMQVDJKwOa4ppxOFC5vuo-FT4",
+      authDomain: "learnification-d69e7.firebaseapp.com",
+      databaseURL: "https://learnification-d69e7.firebaseio.com",
+      projectId: "learnification-d69e7",
+      storageBucket: "learnification-d69e7.appspot.com",
+      messagingSenderId: "958584058400",
+      appId: "1:958584058400:web:0f88d291345754cec4c245"
+    };
+    // Initialize Firebase
+    var gameState = {};
+    firebase.initializeApp(firebaseConfig);
+    var provider = new firebase.auth.GoogleAuthProvider();
+    firebase.auth().onAuthStateChanged(user => {
+      if (!!user){
+        gameState.user = user;
+        $("#userstuff").html(user.displayName);
+        if (document.location.hostname == "localhost"){
+          routePage(devPath());
+        } else {
+          routePage(prodPath());
+        }
+      } else {
+        gameState.user = null;
+        showLogin();
+      }
+    });
+
+    firebase.database().ref("navmods").once('value', ss=>{
+      showModules(ss.val());
+    });
+
+    let showModules = function(modulesObject){
+      let keys = Object.keys(modulesObject);
+      $("#modulesnav").html('');
+      keys.map(slug=>{
+        $("#modulesnav").append(`<a class="list-group-item" href="/module/${slug}">${modulesObject[slug].name}</a>`);
+      });
+    }
+
+    let showLogin = function(){
+      $("#mainpage").html(`<button id="login" type="button" class="btn btn-info">Click to login</button>`);
+      $("#login").click(()=>{
+        firebase.auth().signInWithRedirect(provider);
+      });
+    }
+
+    let insertGist = function($el, gistUrl){
+      /* Create script element */
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = `${gistUrl}.js`;
+      /* Backup document.write function */
+      if(!document._write) document._write = document.write;
+      /* Override document.write function */
+      document.write = function (str) {
+      	document.querySelector($el).innerHTML += str;
+      };
+      /* Append the script element to #scriptCont */
+      document.querySelector($el).appendChild(script);
+      /* When the script load, restore the document.write function */
+      script.onload = function () {
+      	setTimeout(function(){
+      		document.write = document._write;
+      	},0);
+      };
+    }
+
+    let showPage = function(pageObj, request){
+      console.log("showPage",pageObj);
+      $("#mainpage").html(`<div id="maincontent"></div><div id="map"><iframe height="1024" style="width: 100%;" scrolling="no" title="UD Hackathon K-12 Project Lesson Map Base" src="https://codepen.io/squidtina/embed/GRpxYNZ?height=1024&theme-id=light&default-tab=result" frameborder="no" allowtransparency="true" allowfullscreen="true">
+  See the Pen <a href='https://codepen.io/squidtina/pen/GRpxYNZ'>UD Hackathon K-12 Project Lesson Map Base</a> by katinayo
+  (<a href='https://codepen.io/squidtina'>@squidtina</a>) on <a href='https://codepen.io'>CodePen</a>.
+</iframe></div>`);
+      showdown.setFlavor('github');
+      var converter = new showdown.Converter();
+      insertGist("#maincontent", pageObj.content);
+    };
+
+    let showModule = function(request){
+      console.log("sho module", request);
+      let moduleName = request[2];
+      $("#mainpage").html("connecting...");
+      firebase.database().ref("modules").child(moduleName).on('value', ss=>{
+        let thisModule = ss.val();
+        if (request.length < 4 || request[3].length == 0){
+          showPage(thisModule.lessons.default, request);
+        } else {
+          showPage(thisModule.lessons[request[3]], request);
+        }
+      });
+    }
+
+
+    let showStart = function(){
+      $("#mainpage").html("Pick a module from the sidebar");
+    }
+
+    let showExampleMD = function(){
+      var mymd = "# Andy rules\n\nFarts Fart farts\n\n Business Business Business\nIs this working?\n## HOORAY";
+      showdown.setFlavor('github');
+      var converter = new showdown.Converter();
+      $("#mainpage").html(converter.makeHtml(mymd));
+    }
+
+    let routePage = function(path){
+      //if we're here then we have a guser object
+      let request = path.split('/');
+      switch (request[1]){
+        case "mdex":
+          showExampleMD();
+          break;
+        case "module":
+          showModule(request);
+          break;
+        default:
+          showStart();
+          break;
+      }
+    }
+    let devPath = function(){
+      let fakePath = document.location.hash.replace("#","/");
+      return fakePath;
+    }
+    let prodPath = function(){
+      let thePath = document.location.pathname;
+      return thePath;
+    }
+
+    $(document).ready(function() {
+      $('body').bootstrapMaterialDesign();
+      $("#logout").click(()=>{
+        console.log("logging out");
+        $("#userstuff").html("Guest");
+        firebase.auth().signOut();
+        showLogin();
+      });
+    });
+
+  </script>
+  </body>
+</html>
